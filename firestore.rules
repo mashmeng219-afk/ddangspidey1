@@ -1,0 +1,272 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerified() && request.auth.token.email == 'choehyejeong219@gmail.com';
+    }
+
+    function isBoundedString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidList(arr, maxItems) {
+      return arr is list && arr.size() <= maxItems;
+    }
+
+    function isValidImageObj(obj) {
+      return obj is map
+        && obj.keys().hasAll(['url', 'source'])
+        && obj.keys().hasOnly(['url', 'source', 'storagePath', 'width', 'height'])
+        && isBoundedString(obj.url, 0, 1000)
+        && !obj.url.matches('^data:.*')
+        && !obj.url.matches('^blob:.*')
+        && obj.source in ['', 'upload', 'link']
+        && (!('storagePath' in obj) || (obj.storagePath is string && obj.storagePath.size() <= 500))
+        && (!('width' in obj) || ((obj.width is int || obj.width is float) && obj.width >= 0 && obj.width <= 10000))
+        && (!('height' in obj) || ((obj.height is int || obj.height is float) && obj.height >= 0 && obj.height <= 10000))
+        && (obj.source != 'link' || !('storagePath' in obj));
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidWork(data) {
+      return data.keys().hasAll(['title', 'description', 'externalUrl', 'order', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'description', 'externalUrl', 'order', 'ownerId', 'createdAt', 'updatedAt'])
+        && isBoundedString(data.title, 1, 120)
+        && isBoundedString(data.description, 0, 1000)
+        && isBoundedString(data.externalUrl, 0, 500)
+        && (data.order is int || data.order is float)
+        && isValidId(data.ownerId)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCharacter(data) {
+      return data.keys().hasAll([
+          'name', 'workId', 'coverImage', 'heroImage', 'tagline', 'introduction',
+          'crackUrl', 'caveduckUrl', 'relatedUrl', 'infoItems', 'gallery', 'relatedWorkLinks', 'prompts',
+          'order', 'ownerId', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'name', 'workId', 'coverImage', 'heroImage', 'tagline', 'introduction',
+          'crackUrl', 'caveduckUrl', 'relatedUrl', 'infoItems', 'gallery', 'relatedWorkLinks', 'prompts',
+          'order', 'ownerId', 'createdAt', 'updatedAt'
+        ])
+        && isBoundedString(data.name, 1, 120)
+        && data.workId is string && data.workId.size() <= 128
+        && (data.workId == '' || isValidId(data.workId))
+        && isValidImageObj(data.coverImage)
+        && isValidImageObj(data.heroImage)
+        && isBoundedString(data.tagline, 0, 300)
+        && isBoundedString(data.introduction, 0, 10000)
+        && isBoundedString(data.crackUrl, 0, 500)
+        && isBoundedString(data.caveduckUrl, 0, 500)
+        && isBoundedString(data.relatedUrl, 0, 500)
+        && isValidList(data.infoItems, 30)
+        && (data.infoItems.size() == 0 || data.infoItems[0] is map)
+        && isValidList(data.gallery, 30)
+        && (data.gallery.size() == 0 || isValidImageObj(data.gallery[0]))
+        && isValidList(data.relatedWorkLinks, 20)
+        && (data.relatedWorkLinks.size() == 0 || data.relatedWorkLinks[0] is map)
+        && isValidList(data.prompts, 30)
+        && (data.prompts.size() == 0 || data.prompts[0] is map)
+        && (data.order is int || data.order is float)
+        && isValidId(data.ownerId)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVideo(data) {
+      return data.keys().hasAll(['title', 'youtubeUrl', 'youtubeId', 'description', 'characterIds', 'workId', 'order', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['title', 'youtubeUrl', 'youtubeId', 'description', 'characterIds', 'workId', 'order', 'ownerId', 'createdAt', 'updatedAt'])
+        && isBoundedString(data.title, 1, 160)
+        && isBoundedString(data.youtubeUrl, 1, 500)
+        && isBoundedString(data.youtubeId, 1, 40)
+        && data.youtubeId.matches('^[a-zA-Z0-9_\\-]+$')
+        && isBoundedString(data.description, 0, 1000)
+        && isValidList(data.characterIds, 30)
+        && (data.characterIds.size() == 0 || data.characterIds[0] is string)
+        && data.workId is string && data.workId.size() <= 128
+        && (data.workId == '' || isValidId(data.workId))
+        && (data.order is int || data.order is float)
+        && isValidId(data.ownerId)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSong(data) {
+      return data.keys().hasAll([
+          'title', 'artist', 'coverImage', 'audioUrl', 'lyrics',
+          'characterIds', 'workId', 'order', 'ownerId', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'title', 'artist', 'coverImage', 'audioUrl', 'lyrics',
+          'characterIds', 'workId', 'order', 'ownerId', 'createdAt', 'updatedAt'
+        ])
+        && isBoundedString(data.title, 1, 160)
+        && isBoundedString(data.artist, 0, 120)
+        && isValidImageObj(data.coverImage)
+        && isBoundedString(data.audioUrl, 0, 1000)
+        && isBoundedString(data.lyrics, 0, 15000)
+        && isValidList(data.characterIds, 30)
+        && (data.characterIds.size() == 0 || data.characterIds[0] is string)
+        && data.workId is string && data.workId.size() <= 128
+        && (data.workId == '' || isValidId(data.workId))
+        && (data.order is int || data.order is float)
+        && isValidId(data.ownerId)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidLink(data) {
+      return data.keys().hasAll(['kind', 'label', 'url', 'image', 'order', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['kind', 'label', 'url', 'image', 'order', 'ownerId', 'createdAt', 'updatedAt'])
+        && data.kind in ['notice', 'archive', 'header', 'custom']
+        && isBoundedString(data.label, 0, 300)
+        && isBoundedString(data.url, 0, 500)
+        && isValidImageObj(data.image)
+        && (data.order is int || data.order is float)
+        && isValidId(data.ownerId)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collections ---
+    match /works/{workId} {
+      allow get: if isValidId(workId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(workId)
+        && isValidWork(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(workId)
+        && isValidWork(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'externalUrl', 'order', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(workId);
+    }
+
+    match /characters/{characterId} {
+      allow get: if isValidId(characterId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(characterId)
+        && isValidCharacter(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().workId == '' || exists(/databases/$(database)/documents/works/$(incoming().workId)));
+      allow update: if isAdmin()
+        && isValidId(characterId)
+        && isValidCharacter(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (incoming().workId == '' || exists(/databases/$(database)/documents/works/$(incoming().workId)))
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'workId', 'coverImage', 'heroImage', 'tagline', 'introduction',
+          'crackUrl', 'caveduckUrl', 'relatedUrl', 'infoItems', 'gallery', 'relatedWorkLinks', 'prompts',
+          'order', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(characterId);
+    }
+
+    match /videos/{videoId} {
+      allow get: if isValidId(videoId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(videoId)
+        && isValidVideo(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().workId == '' || exists(/databases/$(database)/documents/works/$(incoming().workId)));
+      allow update: if isAdmin()
+        && isValidId(videoId)
+        && isValidVideo(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (incoming().workId == '' || exists(/databases/$(database)/documents/works/$(incoming().workId)))
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'youtubeUrl', 'youtubeId', 'description', 'characterIds', 'workId', 'order', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(videoId);
+    }
+
+    match /songs/{songId} {
+      allow get: if isValidId(songId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(songId)
+        && isValidSong(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().workId == '' || exists(/databases/$(database)/documents/works/$(incoming().workId)));
+      allow update: if isAdmin()
+        && isValidId(songId)
+        && isValidSong(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (incoming().workId == '' || exists(/databases/$(database)/documents/works/$(incoming().workId)))
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'artist', 'coverImage', 'audioUrl', 'lyrics',
+          'characterIds', 'workId', 'order', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(songId);
+    }
+
+    match /links/{linkId} {
+      allow get: if isValidId(linkId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(linkId)
+        && isValidLink(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(linkId)
+        && isValidLink(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'kind', 'label', 'url', 'image', 'order', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(linkId);
+    }
+  }
+}

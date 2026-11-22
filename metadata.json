@@ -1,0 +1,6 @@
+{
+  "name": "땅거미 — Archive",
+  "description": "땅거미 AI Creator 개인 아카이브 (Works, Characters, Videos, Music)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

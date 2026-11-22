@@ -1,0 +1,108 @@
+/**
+ * Payload-First Security Test Specification (Dirty Dozen)
+ * Documents the 12 adversarial payloads that firestore.rules must deny.
+ * Run against Firebase Emulator Suite when @firebase/rules-unit-testing is configured.
+ */
+
+export const DIRTY_DOZEN_CASES = [
+  {
+    id: 1,
+    name: 'Unauthenticated create on /works/work_1',
+    auth: null,
+    path: '/works/work_1',
+    operation: 'create',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 2,
+    name: 'Non-admin verified user write on /characters/char_1',
+    auth: { uid: 'attacker1', email: 'attacker@example.com', email_verified: true },
+    path: '/characters/char_1',
+    operation: 'create',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 3,
+    name: 'Unverified admin email spoof on /links/notice',
+    auth: { uid: 'spoof1', email: 'jennyjelly607@gmail.com', email_verified: false },
+    path: '/links/notice',
+    operation: 'create',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 4,
+    name: 'Self-privilege escalation on /admins/attacker1',
+    auth: { uid: 'attacker1', email: 'attacker@example.com', email_verified: true },
+    path: '/admins/attacker1',
+    operation: 'create',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 5,
+    name: 'Shadow field injection on /works/work_1',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/works/work_1',
+    operation: 'create',
+    payloadExtra: { isFeaturedBypass: true },
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 6,
+    name: 'ID poisoning on /works/bad$id',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/works/bad$id',
+    operation: 'create',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 7,
+    name: 'Orphaned workId reference on /characters/char_orphan',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/characters/char_orphan',
+    operation: 'create',
+    payloadOverride: { workId: 'non_existent_work_999' },
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 8,
+    name: 'Size exhaustion on /songs/song_big',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/songs/song_big',
+    operation: 'create',
+    payloadOverride: { lyricsLength: 20000 },
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 9,
+    name: 'OwnerId spoofing on /videos/vid_1',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/videos/vid_1',
+    operation: 'create',
+    payloadOverride: { ownerId: 'someone_else' },
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 10,
+    name: 'Immortal createdAt tampering on update',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/characters/char_1',
+    operation: 'update',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 11,
+    name: 'Client-forged timestamp on create',
+    auth: { uid: 'admin1', email: 'jennyjelly607@gmail.com', email_verified: true },
+    path: '/links/custom_1',
+    operation: 'create',
+    expected: 'PERMISSION_DENIED',
+  },
+  {
+    id: 12,
+    name: 'Unauthorized list on /admins',
+    auth: null,
+    path: '/admins',
+    operation: 'list',
+    expected: 'PERMISSION_DENIED',
+  },
+] as const;

@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Quaaykop";
+  src:
+    url("/fonts/Quaaykop-Regular.woff2") format("woff2"),
+    url("/fonts/Quaaykop-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --bg-canvas: #060911;
+    --bg-surface: #0b101b;
+    --bg-elevated: #101727;
+    --border-hairline: rgba(255, 255, 255, 0.09);
+    --border-moon: rgba(147, 197, 253, 0.34);
+    --glow-moon: 0 0 36px rgba(147, 197, 253, 0.14);
+  }
+
+  html {
+    font-family: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    scroll-behavior: smooth;
+    background-color: var(--bg-canvas);
+    color: #f1f5f9;
+  }
+
+  body {
+    overflow-x: hidden;
+    background-color: var(--bg-canvas);
+    background-image: radial-gradient(circle at 50% -10%, rgba(147, 197, 253, 0.08), transparent 55%);
+  }
+}
+
+.font-en {
+  font-family: "Quaaykop", "Cormorant Garamond", Georgia, serif;
+}
+
+.en-label {
+  font-family: "Quaaykop", "Cormorant Garamond", Georgia, serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.moon-glow {
+  box-shadow: 0 0 28px rgba(147, 197, 253, 0.14);
+}
+
+.moon-glow-hover:hover {
+  box-shadow: 0 0 34px rgba(147, 197, 253, 0.18);
+}
+
+@keyframes cdSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cd-spin-active {
+  animation: cdSpin 6s linear infinite;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .cd-spin-active {
+    animation: none;
+  }
+}
