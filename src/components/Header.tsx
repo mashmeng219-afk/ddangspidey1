@@ -5,6 +5,17 @@ import type { LinkItem } from '../types/archive';
 
 export type ArchivePage = 'characters' | 'videos' | 'music';
 
+export interface QuickLink {
+  label: string;
+  url: string;
+}
+
+export const QUICK_LINKS: QuickLink[] = [
+  { label: '크랙', url: '' },
+  { label: '스핀스핀', url: '' },
+  { label: '서버상태', url: 'https://rs.igx.kr' },
+];
+
 interface HeaderProps {
   activePage: ArchivePage;
   isDetailView: boolean;
@@ -53,8 +64,10 @@ export function Header({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const crackUrl = crackLink?.url?.trim() || '';
-  const spinspinUrl = spinspinLink?.url?.trim() || '';
+  const dynamicUrlByLabel: Record<string, string> = {
+    크랙: crackLink?.url?.trim() || '',
+    스핀스핀: spinspinLink?.url?.trim() || '',
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -90,8 +103,8 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-white/[0.09] bg-[#060911]/90 backdrop-blur-md">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
-        <nav aria-label="주요 섹션" className="flex items-center gap-5 sm:gap-8">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3 sm:gap-4">
+        <nav aria-label="주요 섹션" className="flex items-center gap-4 sm:gap-8 shrink-0">
           <button
             type="button"
             onClick={() => onNavigatePage('characters')}
@@ -115,48 +128,37 @@ export function Header({
           </button>
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {crackUrl ? (
-            <a
-              href={crackUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs text-slate-200 border border-white/15 hover:border-blue-300/50 hover:text-white transition-colors whitespace-nowrap shrink-0"
-            >
-              <span>크랙</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-300/80" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleEmptyExternalClick('크랙')}
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs text-slate-400 border border-white/15 hover:border-blue-300/40 hover:text-slate-200 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <span>크랙</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-300/60" />
-            </button>
-          )}
-
-          {spinspinUrl ? (
-            <a
-              href={spinspinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs text-slate-200 border border-white/15 hover:border-blue-300/50 hover:text-white transition-colors whitespace-nowrap shrink-0"
-            >
-              <span>스핀스핀</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-300/80" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleEmptyExternalClick('스핀스핀')}
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs text-slate-400 border border-white/15 hover:border-blue-300/40 hover:text-slate-200 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <span>스핀스핀</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-blue-300/60" />
-            </button>
-          )}
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar min-w-0">
+            {QUICK_LINKS.map((item) => {
+              const resolvedUrl = dynamicUrlByLabel[item.label] || item.url.trim();
+              if (resolvedUrl) {
+                return (
+                  <a
+                    key={item.label}
+                    href={resolvedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs text-slate-200 border border-white/15 hover:border-blue-300/50 hover:text-white transition-colors whitespace-nowrap shrink-0"
+                  >
+                    <span>{item.label}</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-blue-300/80" />
+                  </a>
+                );
+              }
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => handleEmptyExternalClick(item.label)}
+                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs text-slate-400 border border-white/15 hover:border-blue-300/40 hover:text-slate-200 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <span>{item.label}</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-blue-300/60" />
+                </button>
+              );
+            })}
+          </div>
 
           {isAdmin && (
             <button
@@ -170,7 +172,7 @@ export function Header({
           )}
 
           {/* Subtle Moon Auth Icon */}
-          <div className="relative" ref={menuContainerRef}>
+          <div className="relative shrink-0" ref={menuContainerRef}>
             {isSignedIn ? (
               <button
                 type="button"
