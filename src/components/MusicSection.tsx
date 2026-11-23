@@ -34,7 +34,7 @@ export function MusicSection({
 }: MusicSectionProps) {
   const { isAdmin } = useArchive();
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [openLyricsIds, setOpenLyricsIds] = useState<Record<string, boolean>>({});
+  const [openLyricsId, setOpenLyricsId] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, { current: number; duration: number }>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -91,7 +91,7 @@ export function MusicSection({
   };
 
   const toggleLyrics = (id: string) => {
-    setOpenLyricsIds((prev) => ({ ...prev, [id]: !prev[id] }));
+    setOpenLyricsId((prev) => (prev === id ? null : id));
   };
 
   return (
@@ -138,10 +138,10 @@ export function MusicSection({
             검색 또는 작품 필터에 일치하는 노래가 없습니다.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 items-start">
             {songs.map((song) => {
               const isPlaying = playingId === song.id;
-              const isLyricsOpen = Boolean(openLyricsIds[song.id]);
+              const isLyricsOpen = openLyricsId === song.id;
               const isHighlighted = highlightedSongId === song.id;
               const progress = progressMap[song.id];
               const coverImageUrl = song.coverImage?.url || '';
@@ -300,7 +300,11 @@ export function MusicSection({
 
                         <button
                           type="button"
-                          onClick={() => toggleLyrics(song.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLyrics(song.id);
+                          }}
+                          aria-expanded={isLyricsOpen}
                           className="inline-flex items-center gap-1 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
                         >
                           <span>{isLyricsOpen ? '가사 닫기' : '가사 보기'}</span>
@@ -315,14 +319,23 @@ export function MusicSection({
                   </div>
 
                   {/* Lyrics Panel */}
-                  {isLyricsOpen && (
-                    <div className="px-6 py-4 border-t border-white/[0.08] bg-[#070B14] max-h-60 overflow-y-auto">
-                      <p className="en-label text-slate-500 mb-2">LYRICS</p>
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line">
-                        {song.lyrics?.trim() || '등록된 가사가 없습니다.'}
-                      </p>
+                  <div
+                    aria-hidden={!isLyricsOpen}
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                      isLyricsOpen
+                        ? 'grid-rows-[1fr] opacity-100'
+                        : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <div className="overflow-hidden min-h-0">
+                      <div className="px-6 py-4 border-t border-white/[0.08] bg-[#070B14] max-h-60 overflow-y-auto">
+                        <p className="en-label text-slate-500 mb-2">LYRICS</p>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+                          {song.lyrics?.trim() || '등록된 가사가 없습니다.'}
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </article>
               );
             })}
